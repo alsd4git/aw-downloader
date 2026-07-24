@@ -22,6 +22,7 @@ import {
 import { Edit2, Loader2, Plus, Save, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { stripAnimeworldIdentifier } from "./animeworld-link";
 import { SortableLinkItem } from "./sortable-link-item";
 
 interface SeasonCardProps {
@@ -118,28 +119,9 @@ export function SeasonCard({
 
     const handleLinkChange = (id: string, value: string) => {
         // Estrae l'identificatore se viene incollato un URL completo
-        let identifier = value.trim();
-        
-        // Controlla se contiene /play/
-        if (identifier.includes('/play/')) {
-            const parts = identifier.split('/play/');
-            identifier = parts[parts.length - 1];
-        }
-        
-        // Rimuove eventuali protocolli e domini rimasti
-        identifier = identifier.replace(/^https?:\/\/[^/]+\/?/, '');
-        
-        // Estrae solo la parte che finisce con .xxxxx (punto + n caratteri alfanumerici)
-        // e rimuove tutto quello che viene dopo (es: /episodio-1)
-        const match = identifier.match(/^([^/]+\.[^/]+)/);
-        if (match) {
-            identifier = match[1];
-        } else {
-            // Se non trova il pattern, rimuove solo eventuali slash finali e parti dopo il primo slash
-            identifier = identifier.split('/')[0];
-        }
-        
-        setEditUrls(editUrls.map((item) => 
+        const identifier = stripAnimeworldIdentifier(value);
+
+        setEditUrls(editUrls.map((item) =>
             item.id === id ? { ...item, value: identifier } : item
         ));
     };

@@ -40,6 +40,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { AnimeworldLink } from "@/components/animeworld-link";
 import { fetchFilms, deleteFilm, updateFilm, syncFilmMetadata, fetchConfigs, type Film, type PaginationMeta } from "@/lib/api";
 
 const languageLabels: Record<string, string> = {
@@ -535,13 +536,13 @@ export default function FilmsPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="animeworldUrl">Link AnimeWorld</Label>
-              <Input
+              <AnimeworldLink
                 id="animeworldUrl"
                 value={editFormData.animeworldUrl}
-                onChange={(e) =>
-                  setEditFormData((prev) => ({ ...prev, animeworldUrl: e.target.value }))
+                baseUrl={animeworldBaseUrl}
+                onChange={(identifier) =>
+                  setEditFormData((prev) => ({ ...prev, animeworldUrl: identifier }))
                 }
-                placeholder="https://www.animeworld.so/play/..."
               />
             </div>
           </div>
