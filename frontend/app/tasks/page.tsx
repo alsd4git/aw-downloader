@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Clock, PlayCircle, CheckCircle, XCircle, Loader2, Play } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Clock, PlayCircle, CheckCircle, XCircle, Loader2, Play, Tv, Film } from "lucide-react";
+import { ShineButton } from "@/components/shine-button";
 import { fetchTasks as apiFetchTasks, executeTask as apiExecuteTask, fetchConfigs } from "@/lib/api";
 
 interface Task {
@@ -91,6 +91,26 @@ export default function TasksPage() {
         {status}
       </span>
     );
+  };
+
+  const getServiceBadge = (serviceType: Task["serviceType"]) => {
+    if (serviceType === "sonarr") {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300">
+          <Tv className="h-3 w-3" />
+          Serie TV
+        </span>
+      );
+    }
+    if (serviceType === "radarr") {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
+          <Film className="h-3 w-3" />
+          Film
+        </span>
+      );
+    }
+    return null;
   };
 
   const formatDate = (dateString: string | null) => {
@@ -182,7 +202,10 @@ export default function TasksPage() {
                 <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
                   <div className="mt-1">{getStatusIcon(task.status)}</div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-base sm:text-lg break-words">{task.name}</h3>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-semibold text-base sm:text-lg break-words">{task.name}</h3>
+                      {getServiceBadge(task.serviceType)}
+                    </div>
                     {task.description && (
                       <p className="text-xs sm:text-sm text-muted-foreground mt-1 break-words">
                         {task.description}
@@ -198,7 +221,7 @@ export default function TasksPage() {
                       Disabilitato
                     </span>
                   ) : (
-                    <Button
+                    <ShineButton
                       onClick={() => handleExecuteNow(task.id)}
                       disabled={task.status === "running" || executing === task.id}
                       size="sm"
@@ -216,7 +239,7 @@ export default function TasksPage() {
                           Esegui Ora
                         </>
                       )}
-                    </Button>
+                    </ShineButton>
                   )}
                 </div>
               </div>

@@ -124,3 +124,88 @@
     cursor: pointer;
   }
 }
+
+@layer components {
+  /*
+   * Bagliore che scorre lungo il bordo del bottone all'hover.
+   *
+   * Un quadrato con un gradiente conico "a cometa" ruota dietro una maschera
+   * che ne lascia visibile solo l'anello di 1px sul perimetro. Ad animarsi è
+   * `transform`, quindi il gradiente viene rasterizzato una volta sola.
+   */
+  .shine-button {
+    position: relative;
+  }
+
+  .shine-button__mask {
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    overflow: hidden;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 200ms ease-out;
+    /* Sottrae l'area interna, lasciando solo la cornice */
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+  }
+
+  .shine-button__glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    /* Deve superare la diagonale del bottone per coprirlo a ogni rotazione */
+    width: 300px;
+    height: 300px;
+    transform-origin: 0 0;
+    transform: rotate(0deg) translate(-50%, -50%);
+    background: conic-gradient(
+      from 0deg,
+      transparent 0%,
+      currentColor 10%,
+      transparent 22%
+    );
+  }
+
+  .shine-button:hover:not(:disabled) .shine-button__mask,
+  .shine-button:focus-visible:not(:disabled) .shine-button__mask {
+    opacity: 1;
+  }
+
+  .shine-button:hover:not(:disabled) .shine-button__glow,
+  .shine-button:focus-visible:not(:disabled) .shine-button__glow {
+    animation: shine-rotate var(--shine-duration, 2.5s) linear infinite;
+  }
+
+  @keyframes shine-rotate {
+    from {
+      transform: rotate(0deg) translate(-50%, -50%);
+    }
+    to {
+      transform: rotate(360deg) translate(-50%, -50%);
+    }
+  }
+
+  /*
+   * Niente rotazione. Il gradiente viene sostituito da una tinta piatta:
+   * fermare e basta l'animazione lascerebbe la cometa congelata su un lato,
+   * che si legge come un errore di rendering invece che come un bordo acceso.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    .shine-button__glow {
+      background: currentColor;
+    }
+
+    .shine-button:hover:not(:disabled) .shine-button__glow,
+    .shine-button:focus-visible:not(:disabled) .shine-button__glow {
+      animation: none;
+    }
+  }
+}

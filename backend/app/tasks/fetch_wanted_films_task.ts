@@ -9,7 +9,7 @@ import { FilmMetadataSyncService } from '#services/film_metadata_sync_service'
 
 export class FetchWantedFilmsTask extends BaseTask {
   id = 'fetch_wanted_films'
-  name = 'Recupero Lista Wanted'
+  name = 'Recupero Film Mancanti'
   description = 'Recupera la lista dei film mancanti da Radarr'
   defaultIntervalMinutes = 30
   serviceType: ServiceType = 'radarr'

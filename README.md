@@ -15,8 +15,10 @@ Applicazione full-stack per la gestione automatica dei download di anime da Anim
 ### 🔄 Task Automatici Configurabili 
 L'applicazione esegue automaticamente diversi task periodici:
 
-- **Sincronizzazione Metadati**: aggiorna informazioni di serie, stagioni ed episodi da Sonarr
-- **Recupero Lista Wanted**: identifica gli episodi mancanti e li aggiunge alla coda di download
+- **Aggiornamento Metadati Serie**: aggiorna informazioni di serie, stagioni ed episodi da Sonarr
+- **Recupero Episodi Mancanti**: identifica gli episodi mancanti e li aggiunge alla coda di download
+- **Aggiornamento Metadati Film**: aggiorna le informazioni dei film da Radarr
+- **Recupero Film Mancanti**: identifica i film mancanti e li aggiunge alla coda di download
 
 Ogni task può essere configurato con un intervallo personalizzato (da 15 minuti a 2 giorni) e può essere eseguito manualmente pagina Tasks.
 

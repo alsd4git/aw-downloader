@@ -10,7 +10,7 @@ import Series from '#models/series'
 
 export class FetchWantedSeriesTask extends BaseTask {
   id = 'fetch_wanted'
-  name = 'Recupero Lista Wanted'
+  name = 'Recupero Episodi Mancanti'
   description = 'Recupera la lista degli episodi mancanti da Sonarr'
   defaultIntervalMinutes = 30 // 30 minuti
   serviceType: 'sonarr' | 'radarr' | 'general' = 'sonarr'

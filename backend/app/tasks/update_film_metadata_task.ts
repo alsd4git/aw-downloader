@@ -7,7 +7,7 @@ import { BaseTask, ServiceType } from './base_task.js'
 
 export class UpdateFilmMetadataTask extends BaseTask {
   id = 'update_film_metadata'
-  name = 'Aggiornamento Metadati Radarr'
+  name = 'Aggiornamento Metadati Film'
   description = 'Sincronizza i metadati dei film tramite API Radarr'
   defaultIntervalMinutes = 720 // 12 ore
   serviceType: ServiceType = 'radarr'

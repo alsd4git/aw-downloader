@@ -7,8 +7,8 @@ import { BaseTask, ServiceType } from './base_task.js'
 
 export class UpdateSeriesMetadataTask extends BaseTask {
   id = 'update_metadata'
-  name = 'Aggiornamento Metadati Sonarr'
-  description = 'Sincronizza i metadati delle serie tramite API Sonarr'
+  name = 'Aggiornamento Metadati Serie'
+  description = 'Sincronizza i metadati delle serie TV tramite API Sonarr'
   defaultIntervalMinutes = 720 // 12 ore
   serviceType: ServiceType = 'sonarr'
   intervalConfigKey = 'sonarr_updatemetadata_interval'
