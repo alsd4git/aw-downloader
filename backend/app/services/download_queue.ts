@@ -14,6 +14,7 @@ export interface QueueItem {
   episodeNumber: number
   episodeTitle: string
   downloadUrl: string
+  sourceFormat?: 'sub' | 'dub' | null
   status: 'pending' | 'downloading' | 'completed' | 'failed'
   progress: number
   downloadSpeed?: number // bytes per second
@@ -271,6 +272,7 @@ export class DownloadQueue extends EventEmitter {
           episodeNumber: item.episodeNumber,
           episodeTitle: item.episodeTitle,
           downloadUrl: item.downloadUrl,
+          sourceFormat: item.sourceFormat,
         },
         item.id
       )
