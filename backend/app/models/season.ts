@@ -52,6 +52,9 @@ export default class Season extends BaseModel {
   declare status: 'not_started' | 'downloading' | 'completed'
 
   @column()
+  declare downloadVariant: 'sub' | 'dub' | null
+
+  @column()
   declare deleted: boolean
 
   @column.date()
