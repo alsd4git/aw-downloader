@@ -7,6 +7,10 @@ import { getSonarrService } from '#services/sonarr_service'
 import DownloadSuccessEvent from '#events/download_success_event'
 import DownloadErrorEvent from '#events/download_error_event'
 import { buildSonarrFilename } from '../helpers/sonarr_filename.js'
+import {
+  isMatchingSonarrCopy,
+  type SonarrCopyReceipt,
+} from '../helpers/sonarr_file_provenance.js'
 import app from '@adonisjs/core/services/app'
 import emitter from '@adonisjs/core/services/emitter'
 import axios from 'axios'
@@ -32,11 +36,6 @@ interface DownloadChunk {
   start: number
   end: number
   filePath: string
-}
-
-interface SonarrCopyReceipt {
-  seriesId: number
-  relativePath: string
 }
 
 export class DownloadEpisodesTask {
@@ -415,10 +414,6 @@ export class DownloadEpisodesTask {
     }
   }
 
-  private static normalizeSonarrRelativePath(relativePath: string): string {
-    return relativePath.replace(/\\/g, '/').replace(/^\.\//, '').replace(/^\/+/, '')
-  }
-
   /**
    * Apply metadata that cannot be represented safely in the filename and optionally
    * trigger Sonarr's rename command. The episode file is polled because the rescan
@@ -465,16 +460,11 @@ export class DownloadEpisodesTask {
       // Confirm that Sonarr indexed the exact file AW copied before applying
       // language overrides or rename commands.
       const episodeFile = await sonarrService.getEpisodeFile(episode.episodeFileId)
-      const expectedRelativePath = this.normalizeSonarrRelativePath(sonarrCopy.relativePath)
-      const actualRelativePath = this.normalizeSonarrRelativePath(episodeFile.relativePath)
 
-      if (
-        episodeFile.seriesId !== sonarrCopy.seriesId ||
-        actualRelativePath !== expectedRelativePath
-      ) {
+      if (!isMatchingSonarrCopy(sonarrCopy, episodeFile)) {
         logger.warning(
           'DownloadTask',
-          `File Sonarr non corrispondente alla copia AW per ${seriesTitle} S${seasonNumber}E${episodeNumber}: atteso "${expectedRelativePath}", trovato "${actualRelativePath}". Metadata/rename saltati.`
+          `File Sonarr non corrispondente alla copia AW per ${seriesTitle} S${seasonNumber}E${episodeNumber}: atteso "${sonarrCopy.relativePath}", trovato "${episodeFile.relativePath}". Metadata/rename saltati.`
         )
         return
       }
