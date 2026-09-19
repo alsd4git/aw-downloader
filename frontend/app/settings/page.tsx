@@ -88,6 +88,7 @@ interface Configs {
   sonarr_token?: string;
   sonarr_filter_anime_only?: boolean;
   sonarr_auto_rename?: boolean;
+  sonarr_release_group_enabled?: boolean;
   sonarr_release_group?: string;
   sonarr_tags_mode?: string;
   sonarr_tags?: Array<{ label: string; value: string }>;
@@ -102,6 +103,7 @@ interface ConfigInputs {
   sonarr_token: string;
   sonarr_filter_anime_only: boolean;
   sonarr_auto_rename: boolean;
+  sonarr_release_group_enabled: boolean;
   sonarr_release_group: string;
   sonarr_tags_mode: string;
   sonarr_tags: string[];
@@ -135,7 +137,8 @@ export default function ImpostazioniPage() {
     sonarr_token: "",
     sonarr_filter_anime_only: true,
     sonarr_auto_rename: false,
-    sonarr_release_group: "",
+    sonarr_release_group_enabled: false,
+    sonarr_release_group: "AnimeWorld",
     sonarr_tags_mode: "blacklist",
     sonarr_tags: [],
     animeworld_base_url: "",
@@ -287,7 +290,8 @@ export default function ImpostazioniPage() {
         sonarr_token: "", // Never show the token
         sonarr_filter_anime_only: typeof data.sonarr_filter_anime_only === 'boolean' ? data.sonarr_filter_anime_only : data.sonarr_filter_anime_only !== 'false',
         sonarr_auto_rename: typeof data.sonarr_auto_rename === 'boolean' ? data.sonarr_auto_rename : data.sonarr_auto_rename === 'true',
-        sonarr_release_group: data.sonarr_release_group || "",
+        sonarr_release_group_enabled: typeof data.sonarr_release_group_enabled === 'boolean' ? data.sonarr_release_group_enabled : data.sonarr_release_group_enabled === 'true',
+        sonarr_release_group: data.sonarr_release_group || "AnimeWorld",
         sonarr_tags_mode: data.sonarr_tags_mode || "blacklist",
         sonarr_tags: parsedTags.map((t: any) => String(t.value || t)),
         animeworld_base_url: data.animeworld_base_url || "",
@@ -447,6 +451,19 @@ export default function ImpostazioniPage() {
     }
   };
 
+  const handleReleaseGroupToggle = async (checked: boolean) => {
+    setConfigInputs((prev) => ({ ...prev, sonarr_release_group_enabled: checked }));
+
+    try {
+      await apiUpdateConfig("sonarr_release_group_enabled", checked);
+      setConfigs((prev) => ({ ...prev, sonarr_release_group_enabled: checked }));
+      toast.success(checked ? "Release group attivato" : "Release group disattivato");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Errore salvataggio impostazione");
+      setConfigInputs((prev) => ({ ...prev, sonarr_release_group_enabled: !checked }));
+    }
+  };
+
   const handleTagModeChange = async (value: string) => {
     setConfigInputs((prev) => ({ ...prev, sonarr_tags_mode: value }));
 
@@ -513,6 +530,7 @@ export default function ImpostazioniPage() {
           sonarr_token: "Token API",
           sonarr_filter_anime_only: "Filtra Solo Anime",
           sonarr_auto_rename: "Rinomina Automatica",
+          sonarr_release_group_enabled: "Release Group",
           sonarr_release_group: "Release Group",
           sonarr_tags_mode: "Modalità Tag",
           sonarr_tags: "Tag",
@@ -698,8 +716,22 @@ export default function ImpostazioniPage() {
                 <div className="sm:hidden border-t my-4" />
 
                 {/* Release Group */}
-                <div className="space-y-2">
-                  <Label htmlFor="release-group">Release group</Label>
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                      <Label htmlFor="release-group-enabled" className="cursor-pointer">
+                        Release group
+                      </Label>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
+                        Aggiunge un release group al file prima della scansione Sonarr. Disattivato di default.
+                      </p>
+                    </div>
+                    <Switch
+                      id="release-group-enabled"
+                      checked={configInputs.sonarr_release_group_enabled}
+                      onCheckedChange={handleReleaseGroupToggle}
+                    />
+                  </div>
                   <div className="flex w-full items-center gap-2">
                     <Input
                       id="release-group"
@@ -707,13 +739,16 @@ export default function ImpostazioniPage() {
                       value={configInputs.sonarr_release_group}
                       onChange={(e) => handleConfigChange("sonarr_release_group", e.target.value)}
                       placeholder="AnimeWorld"
+                      disabled={!configInputs.sonarr_release_group_enabled}
                     />
                     <Button
                       size="sm"
                       onClick={() => handleSaveConfig("sonarr_release_group")}
                       disabled={
+                        !configInputs.sonarr_release_group_enabled ||
                         (isSavingConfig && savingConfigKey === "sonarr_release_group") ||
-                        configInputs.sonarr_release_group === (configs.sonarr_release_group || "")
+                        !configInputs.sonarr_release_group.trim() ||
+                        configInputs.sonarr_release_group === (configs.sonarr_release_group || "AnimeWorld")
                       }
                     >
                       {isSavingConfig && savingConfigKey === "sonarr_release_group" ? (
@@ -730,8 +765,8 @@ export default function ImpostazioniPage() {
                     </Button>
                   </div>
                   <p className="text-xs sm:text-sm text-muted-foreground">
-                    Facoltativo. Viene aggiunto al file come suffisso <code>-Group</code> prima della scansione,
-                    così Sonarr può conservarlo nel token <code>{'{Release Group}'}</code>. Lascia vuoto per disattivarlo.
+                    Con il valore predefinito il file temporaneo diventa <code>Titolo - S01E01-AnimeWorld.ext</code>.
+                    Sonarr può poi conservarlo tramite il token <code>{'{Release Group}'}</code>.
                   </p>
                 </div>
                 <div className="sm:hidden border-t my-4" />
