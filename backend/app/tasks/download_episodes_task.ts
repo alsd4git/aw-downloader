@@ -6,6 +6,7 @@ import { logger } from '#services/logger_service'
 import { getSonarrService } from '#services/sonarr_service'
 import DownloadSuccessEvent from '#events/download_success_event'
 import DownloadErrorEvent from '#events/download_error_event'
+import { buildSonarrFilename } from '../helpers/sonarr_filename.js'
 import app from '@adonisjs/core/services/app'
 import emitter from '@adonisjs/core/services/emitter'
 import axios from 'axios'
@@ -300,31 +301,6 @@ export class DownloadEpisodesTask {
   }
 
   /**
-   * Sanitize filename by removing invalid characters (based on Sonarr rules)
-   * @param filename - The filename to sanitize
-   * @returns Sanitized filename
-   */
-  private static sanitizeFilename(filename: string): string {
-    let sanitized = filename
-    
-    // Replace specific characters following Sonarr's rules
-    sanitized = sanitized.replace(/[\*:]/g, '-')  // * : => -
-    sanitized = sanitized.replace(/\//g, '+')  // / => +
-    sanitized = sanitized.replace(/\?/g, '!')  // ? => !
-    
-    // Remove these characters: | \ <> "
-    sanitized = sanitized.replace(/[|\\<>"]/g, '')
-    
-    // Remove leading dots
-    sanitized = sanitized.replace(/^\.+/, '')
-    
-    // Trim spaces
-    sanitized = sanitized.trim()
-    
-    return sanitized
-  }
-
-  /**
    * Map Sonarr path to local path using root folder mappings
    */
   private static async mapSonarrPathToLocal(sonarrPath: string): Promise<string> {
@@ -381,12 +357,14 @@ export class DownloadEpisodesTask {
       // Ensure the series folder exists
       await fs.mkdir(localSeriesPath, { recursive: true })
 
-      // Format filename for Sonarr: "{Title} - S{season:00}E{episode:00}.ext"
-      const seasonStr = params.seasonNumber.toString().padStart(2, '0')
-      const episodeStr = params.episodeNumber.toString().padStart(2, '0')
-      const extension = path.extname(downloadedFilePath)
-      const sanitizedTitle = this.sanitizeFilename(params.seriesTitle)
-      const sonarrFilename = `${sanitizedTitle} - S${seasonStr}E${episodeStr}${extension}`
+      const releaseGroup = await Config.get<string>('sonarr_release_group')
+      const sonarrFilename = buildSonarrFilename({
+        seriesTitle: params.seriesTitle,
+        seasonNumber: params.seasonNumber,
+        episodeNumber: params.episodeNumber,
+        extension: path.extname(downloadedFilePath),
+        releaseGroup,
+      })
       const destinationPath = path.join(localSeriesPath, sonarrFilename)
 
       logger.debug('DownloadTask', `Copia del file nella cartella Sonarr in corso...`)
