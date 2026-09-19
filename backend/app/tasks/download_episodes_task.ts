@@ -394,6 +394,7 @@ export class DownloadEpisodesTask {
 
       // Copy file to Sonarr folder
       await fs.copyFile(downloadedFilePath, destinationPath)
+      const copiedFileStat = await fs.stat(destinationPath)
 
       logger.success('DownloadTask', `File copiato con successo`)
 
@@ -404,6 +405,7 @@ export class DownloadEpisodesTask {
       return {
         seriesId: series.sonarrId,
         relativePath: sonarrFilename,
+        size: copiedFileStat.size,
       }
 
     } catch (error) {
@@ -464,7 +466,7 @@ export class DownloadEpisodesTask {
       if (!isMatchingSonarrCopy(sonarrCopy, episodeFile)) {
         logger.warning(
           'DownloadTask',
-          `File Sonarr non corrispondente alla copia AW per ${seriesTitle} S${seasonNumber}E${episodeNumber}: atteso "${sonarrCopy.relativePath}", trovato "${episodeFile.relativePath}". Metadata/rename saltati.`
+          `File Sonarr non corrispondente alla copia AW per ${seriesTitle} S${seasonNumber}E${episodeNumber}: atteso "${sonarrCopy.relativePath}" (${sonarrCopy.size} byte), trovato "${episodeFile.relativePath}" (${episodeFile.size} byte). Metadata/rename saltati.`
         )
         return
       }
