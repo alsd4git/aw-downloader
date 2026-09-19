@@ -26,6 +26,7 @@ import { MyAnimeListAnime, MyAnimeListService } from './myanimelist_service.js'
 export interface SeasonMatch {
   animeworldTitle: string
   animeworldIdentifier: string
+  animeworldDub: FilterDub
   anilistId?: number
   anilistTitle?: string
   anilistStartDate?: string | null
@@ -245,6 +246,13 @@ export class MetadataSyncService {
         const seasonMatch = await this.findMatchingSeason(series, season.seasonNumber)
         if (seasonMatch && seasonMatch.length > 0) {
           season.downloadUrls = seasonMatch.map((s) => s.animeworldIdentifier)
+          const variants = new Set(seasonMatch.map((s) => s.animeworldDub))
+          season.downloadVariant =
+            variants.size === 1
+              ? seasonMatch[0].animeworldDub === FilterDub.Dub
+                ? 'dub'
+                : 'sub'
+              : null
           await season.save()
         } else {
           await this.searchAndSetAnimeworldUrl(series, season, season.seasonNumber)
@@ -353,8 +361,17 @@ export class MetadataSyncService {
           animeIdentifiers.push(identifier)
         }
 
-        // Save identifiers to season's downloadUrls (will be automatically JSON encoded)
+        // Save identifiers and the actual selected AnimeWorld variant.
+        // This matters for dub_fallback_sub: the configured preference does not
+        // tell us which variant was ultimately selected.
         season.downloadUrls = animeIdentifiers
+        const variants = new Set(matches.map((match) => match.dub))
+        season.downloadVariant =
+          variants.size === 1
+            ? matches[0].dub === FilterDub.Dub
+              ? 'dub'
+              : 'sub'
+            : null
         await season.save()
 
         logger.info(
@@ -651,6 +668,7 @@ export class MetadataSyncService {
       matches.push({
         animeworldTitle: awResult.title,
         animeworldIdentifier: awResult.identifier,
+        animeworldDub: awResult.dub,
         anilistId: anilistResult?.id,
         anilistTitle: anilistResult?.title.romaji || anilistResult?.title.english || '',
         anilistStartDate: anilistResult?.startDateUtc,
