@@ -47,6 +47,15 @@ export interface SonarrEpisode {
   episodeFileId?: number
 }
 
+export interface SonarrEpisodeFile {
+  id: number
+  seriesId: number
+  seasonNumber: number
+  relativePath: string
+  path: string
+  languages: SonarrLanguage[]
+}
+
 export interface SonarrWantedRecord {
   id: number
   seriesId: number
@@ -239,6 +248,29 @@ export class SonarrService {
       return response.data
     } catch (error) {
       logger.error('SonarrService', `Errore durante il recupero dell'episodio`, error)
+      throw error
+    }
+  }
+
+  /**
+   * Get a single episode file by ID.
+   */
+  async getEpisodeFile(episodeFileId: number): Promise<SonarrEpisodeFile> {
+    this.ensureInitialized()
+    this.ensureHealthy()
+
+    try {
+      const response = await axios.get<SonarrEpisodeFile>(
+        `${this.sonarrUrl}/api/v3/episodefile/${episodeFileId}`,
+        {
+          headers: {
+            'X-Api-Key': this.sonarrToken,
+          },
+        }
+      )
+      return response.data
+    } catch (error) {
+      logger.error('SonarrService', `Errore durante il recupero del file episodio ${episodeFileId}`, error)
       throw error
     }
   }
