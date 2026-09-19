@@ -34,6 +34,11 @@ interface DownloadChunk {
   filePath: string
 }
 
+interface SonarrCopyReceipt {
+  seriesId: number
+  relativePath: string
+}
+
 export class DownloadEpisodesTask {
   private static cancelledDownloads: Set<string> = new Set()
 
@@ -124,13 +129,16 @@ export class DownloadEpisodesTask {
       // Clean up temp files
       await fs.rm(tempDir, { recursive: true, force: true })
       
-      // Copy file to Sonarr folder and trigger rescan
-      await this.copyToSonarrAndRescan(params, outputPath)
+      // Copy file to Sonarr folder and trigger rescan.
+      // A receipt is returned only when AW actually copied this specific file.
+      const sonarrCopy = await this.copyToSonarrAndRescan(params, outputPath)
 
       // Clean up merged temp file
       await fs.rm(outputPath, { force: true }).catch(() => {})
 
-      await this.finalizeSonarrEpisode(params)
+      if (sonarrCopy) {
+        await this.finalizeSonarrEpisode(params, sonarrCopy)
+      }
       
       // Mark as completed
       queue.completeItem(queueItemId)
@@ -325,7 +333,10 @@ export class DownloadEpisodesTask {
   /**
    * Copy downloaded file to Sonarr folder and trigger rescan
    */
-  private static async copyToSonarrAndRescan(params: DownloadEpisodeParams, downloadedFilePath: string): Promise<void> {
+  private static async copyToSonarrAndRescan(
+    params: DownloadEpisodeParams,
+    downloadedFilePath: string
+  ): Promise<SonarrCopyReceipt | null> {
     try {
       // Get series info from local database
       const series = await Series.query()
@@ -334,12 +345,12 @@ export class DownloadEpisodesTask {
 
       if (!series) {
         logger.error('DownloadTask', `Serie ${params.seriesTitle} non trovata`)
-        return
+        return null
       }
 
       if (!series.sonarrId) {
         logger.error('DownloadTask', `La serie ${params.seriesTitle} non ha un ID Sonarr associato`)
-        return
+        return null
       }
 
       // Get series details from Sonarr (with cache)
@@ -349,7 +360,7 @@ export class DownloadEpisodesTask {
 
       if (!sonarrSeries.path) {
         logger.error('DownloadTask', `La serie ${params.seriesTitle} non ha un percorso configurato in Sonarr`)
-        return
+        return null
       }
 
       // Map Sonarr path to local path
@@ -391,10 +402,21 @@ export class DownloadEpisodesTask {
       await sonarrService.rescanSeries(series.sonarrId)
       logger.success('DownloadTask', `Scansione della serie avviata`)
 
+      return {
+        seriesId: series.sonarrId,
+        relativePath: sonarrFilename,
+      }
+
     } catch (error) {
       logger.error('DownloadTask', 'Impossibile copiare il file o avviare la scansione', error)
-      // Don't throw - the download was successful, just the copy/rescan failed
+      // Don't throw - the download was successful, just the copy/rescan failed.
+      // Returning null prevents post-rescan actions from touching an unrelated file.
+      return null
     }
+  }
+
+  private static normalizeSonarrRelativePath(relativePath: string): string {
+    return relativePath.replace(/\\/g, '/').replace(/^\.\//, '').replace(/^\/+/, '')
   }
 
   /**
@@ -402,13 +424,16 @@ export class DownloadEpisodesTask {
    * trigger Sonarr's rename command. The episode file is polled because the rescan
    * command is asynchronous.
    */
-  private static async finalizeSonarrEpisode({
-    seriesTitle,
-    episodeId,
-    episodeNumber,
-    seasonNumber,
-    sourceFormat,
-  }: DownloadEpisodeParams): Promise<void> {
+  private static async finalizeSonarrEpisode(
+    {
+      seriesTitle,
+      episodeId,
+      episodeNumber,
+      seasonNumber,
+      sourceFormat,
+    }: DownloadEpisodeParams,
+    sonarrCopy: SonarrCopyReceipt
+  ): Promise<void> {
     try {
       const autoRename = (await Config.get<boolean>('sonarr_auto_rename')) ?? false
       const overrideDubLanguage =
@@ -432,6 +457,24 @@ export class DownloadEpisodesTask {
         logger.warning(
           'DownloadTask',
           `ID del file non trovato per ${seriesTitle} S${seasonNumber}E${episodeNumber}, metadata/rename saltati`
+        )
+        return
+      }
+
+      // Never mutate an EpisodeFile just because it belongs to the same episode.
+      // Confirm that Sonarr indexed the exact file AW copied before applying
+      // language overrides or rename commands.
+      const episodeFile = await sonarrService.getEpisodeFile(episode.episodeFileId)
+      const expectedRelativePath = this.normalizeSonarrRelativePath(sonarrCopy.relativePath)
+      const actualRelativePath = this.normalizeSonarrRelativePath(episodeFile.relativePath)
+
+      if (
+        episodeFile.seriesId !== sonarrCopy.seriesId ||
+        actualRelativePath !== expectedRelativePath
+      ) {
+        logger.warning(
+          'DownloadTask',
+          `File Sonarr non corrispondente alla copia AW per ${seriesTitle} S${seasonNumber}E${episodeNumber}: atteso "${expectedRelativePath}", trovato "${actualRelativePath}". Metadata/rename saltati.`
         )
         return
       }
