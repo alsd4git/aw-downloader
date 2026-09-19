@@ -53,6 +53,7 @@ export interface SonarrEpisodeFile {
   seasonNumber: number
   relativePath: string
   path: string
+  size: number
   languages: SonarrLanguage[]
 }
 
