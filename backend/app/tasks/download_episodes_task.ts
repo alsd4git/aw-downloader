@@ -24,6 +24,7 @@ export interface DownloadEpisodeParams {
   episodeNumber: number
   episodeTitle: string
   downloadUrl: string
+  sourceFormat?: 'sub' | 'dub' | null
 }
 
 interface DownloadChunk {
@@ -358,12 +359,22 @@ export class DownloadEpisodesTask {
       await fs.mkdir(localSeriesPath, { recursive: true })
 
       const releaseGroup = await Config.get<string>('sonarr_release_group')
+      const sourceMarker = await Config.get<string>('sonarr_source_marker')
+      const formatMarker =
+        params.sourceFormat === 'sub'
+          ? await Config.get<string>('sonarr_sub_format_marker')
+          : params.sourceFormat === 'dub'
+            ? await Config.get<string>('sonarr_dub_format_marker')
+            : null
+
       const sonarrFilename = buildSonarrFilename({
         seriesTitle: params.seriesTitle,
         seasonNumber: params.seasonNumber,
         episodeNumber: params.episodeNumber,
         extension: path.extname(downloadedFilePath),
         releaseGroup,
+        sourceMarker,
+        formatMarker,
       })
       const destinationPath = path.join(localSeriesPath, sonarrFilename)
 
