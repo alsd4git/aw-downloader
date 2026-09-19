@@ -357,7 +357,10 @@ export class DownloadEpisodesTask {
       // Ensure the series folder exists
       await fs.mkdir(localSeriesPath, { recursive: true })
 
-      const releaseGroup = await Config.get<string>('sonarr_release_group')
+      const releaseGroupEnabled = (await Config.get<boolean>('sonarr_release_group_enabled')) ?? false
+      const releaseGroup = releaseGroupEnabled
+        ? (await Config.get<string>('sonarr_release_group')) || 'AnimeWorld'
+        : null
       const sonarrFilename = buildSonarrFilename({
         seriesTitle: params.seriesTitle,
         seasonNumber: params.seasonNumber,
