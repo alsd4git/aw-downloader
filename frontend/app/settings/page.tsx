@@ -89,6 +89,9 @@ interface Configs {
   sonarr_filter_anime_only?: boolean;
   sonarr_auto_rename?: boolean;
   sonarr_release_group?: string;
+  sonarr_source_marker?: string;
+  sonarr_sub_format_marker?: string;
+  sonarr_dub_format_marker?: string;
   sonarr_tags_mode?: string;
   sonarr_tags?: Array<{ label: string; value: string }>;
   animeworld_base_url?: string;
@@ -103,6 +106,9 @@ interface ConfigInputs {
   sonarr_filter_anime_only: boolean;
   sonarr_auto_rename: boolean;
   sonarr_release_group: string;
+  sonarr_source_marker: string;
+  sonarr_sub_format_marker: string;
+  sonarr_dub_format_marker: string;
   sonarr_tags_mode: string;
   sonarr_tags: string[];
   animeworld_base_url: string;
@@ -136,6 +142,9 @@ export default function ImpostazioniPage() {
     sonarr_filter_anime_only: true,
     sonarr_auto_rename: false,
     sonarr_release_group: "",
+    sonarr_source_marker: "",
+    sonarr_sub_format_marker: "",
+    sonarr_dub_format_marker: "",
     sonarr_tags_mode: "blacklist",
     sonarr_tags: [],
     animeworld_base_url: "",
@@ -288,6 +297,9 @@ export default function ImpostazioniPage() {
         sonarr_filter_anime_only: typeof data.sonarr_filter_anime_only === 'boolean' ? data.sonarr_filter_anime_only : data.sonarr_filter_anime_only !== 'false',
         sonarr_auto_rename: typeof data.sonarr_auto_rename === 'boolean' ? data.sonarr_auto_rename : data.sonarr_auto_rename === 'true',
         sonarr_release_group: data.sonarr_release_group || "",
+        sonarr_source_marker: data.sonarr_source_marker || "",
+        sonarr_sub_format_marker: data.sonarr_sub_format_marker || "",
+        sonarr_dub_format_marker: data.sonarr_dub_format_marker || "",
         sonarr_tags_mode: data.sonarr_tags_mode || "blacklist",
         sonarr_tags: parsedTags.map((t: any) => String(t.value || t)),
         animeworld_base_url: data.animeworld_base_url || "",
@@ -514,6 +526,9 @@ export default function ImpostazioniPage() {
           sonarr_filter_anime_only: "Filtra Solo Anime",
           sonarr_auto_rename: "Rinomina Automatica",
           sonarr_release_group: "Release Group",
+          sonarr_source_marker: "Marcatore Sorgente",
+          sonarr_sub_format_marker: "Marcatore Formato SUB",
+          sonarr_dub_format_marker: "Marcatore Formato DUB",
           sonarr_tags_mode: "Modalità Tag",
           sonarr_tags: "Tag",
           animeworld_base_url: "URL Base AnimeWorld",
@@ -733,6 +748,71 @@ export default function ImpostazioniPage() {
                     Facoltativo. Viene aggiunto al file come suffisso <code>-Group</code> prima della scansione,
                     così Sonarr può conservarlo nel token <code>{'{Release Group}'}</code>. Lascia vuoto per disattivarlo.
                   </p>
+                </div>
+                <div className="sm:hidden border-t my-4" />
+
+                {/* Source and format markers */}
+                <div className="space-y-3">
+                  <div>
+                    <Label>Marcatori nome file</Label>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      Facoltativi. I valori vuoti non modificano il naming attuale.
+                    </p>
+                  </div>
+                  {([
+                    {
+                      key: "sonarr_source_marker",
+                      label: "Sorgente",
+                      placeholder: "AnimeWorld",
+                      help: "Prefisso del file, ad esempio [AnimeWorld].",
+                    },
+                    {
+                      key: "sonarr_sub_format_marker",
+                      label: "Formato sottotitolato",
+                      placeholder: "SUB-ITA",
+                      help: "Usato solo quando la variante scaricata è sottotitolata.",
+                    },
+                    {
+                      key: "sonarr_dub_format_marker",
+                      label: "Formato doppiato",
+                      placeholder: "DUB-ITA",
+                      help: "Usato solo quando la variante scaricata è doppiata.",
+                    },
+                  ] as const).map(({ key, label, placeholder, help }) => (
+                    <div key={key} className="space-y-1">
+                      <Label htmlFor={key}>{label}</Label>
+                      <div className="flex w-full items-center gap-2">
+                        <Input
+                          id={key}
+                          type="text"
+                          value={configInputs[key]}
+                          onChange={(e) => handleConfigChange(key, e.target.value)}
+                          placeholder={placeholder}
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => handleSaveConfig(key)}
+                          disabled={
+                            (isSavingConfig && savingConfigKey === key) ||
+                            configInputs[key] === (configs[key] || "")
+                          }
+                        >
+                          {isSavingConfig && savingConfigKey === key ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Salvataggio...
+                            </>
+                          ) : (
+                            <>
+                              <Save className="mr-2 h-4 w-4" />
+                              Salva
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{help}</p>
+                    </div>
+                  ))}
                 </div>
                 <div className="sm:hidden border-t my-4" />
 
