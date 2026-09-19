@@ -39,6 +39,7 @@ export default class DownloadQueueController {
       'episodeNumber',
       'episodeTitle',
       'downloadUrl',
+      'sourceFormat',
     ])
 
     // Validate required fields
