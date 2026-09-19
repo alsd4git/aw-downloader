@@ -90,6 +90,10 @@ interface Configs {
   sonarr_auto_rename?: boolean;
   sonarr_release_group_enabled?: boolean;
   sonarr_release_group?: string;
+  sonarr_format_marker_enabled?: boolean;
+  sonarr_sub_format_marker?: string;
+  sonarr_dub_format_marker?: string;
+  sonarr_dub_language_override_enabled?: boolean;
   sonarr_tags_mode?: string;
   sonarr_tags?: Array<{ label: string; value: string }>;
   animeworld_base_url?: string;
@@ -105,6 +109,10 @@ interface ConfigInputs {
   sonarr_auto_rename: boolean;
   sonarr_release_group_enabled: boolean;
   sonarr_release_group: string;
+  sonarr_format_marker_enabled: boolean;
+  sonarr_sub_format_marker: string;
+  sonarr_dub_format_marker: string;
+  sonarr_dub_language_override_enabled: boolean;
   sonarr_tags_mode: string;
   sonarr_tags: string[];
   animeworld_base_url: string;
@@ -139,6 +147,10 @@ export default function ImpostazioniPage() {
     sonarr_auto_rename: false,
     sonarr_release_group_enabled: false,
     sonarr_release_group: "AnimeWorld",
+    sonarr_format_marker_enabled: false,
+    sonarr_sub_format_marker: "HARDSUB",
+    sonarr_dub_format_marker: "DUB",
+    sonarr_dub_language_override_enabled: false,
     sonarr_tags_mode: "blacklist",
     sonarr_tags: [],
     animeworld_base_url: "",
@@ -292,6 +304,10 @@ export default function ImpostazioniPage() {
         sonarr_auto_rename: typeof data.sonarr_auto_rename === 'boolean' ? data.sonarr_auto_rename : data.sonarr_auto_rename === 'true',
         sonarr_release_group_enabled: typeof data.sonarr_release_group_enabled === 'boolean' ? data.sonarr_release_group_enabled : data.sonarr_release_group_enabled === 'true',
         sonarr_release_group: data.sonarr_release_group || "AnimeWorld",
+        sonarr_format_marker_enabled: typeof data.sonarr_format_marker_enabled === 'boolean' ? data.sonarr_format_marker_enabled : data.sonarr_format_marker_enabled === 'true',
+        sonarr_sub_format_marker: data.sonarr_sub_format_marker || "HARDSUB",
+        sonarr_dub_format_marker: data.sonarr_dub_format_marker || "DUB",
+        sonarr_dub_language_override_enabled: typeof data.sonarr_dub_language_override_enabled === 'boolean' ? data.sonarr_dub_language_override_enabled : data.sonarr_dub_language_override_enabled === 'true',
         sonarr_tags_mode: data.sonarr_tags_mode || "blacklist",
         sonarr_tags: parsedTags.map((t: any) => String(t.value || t)),
         animeworld_base_url: data.animeworld_base_url || "",
@@ -464,6 +480,36 @@ export default function ImpostazioniPage() {
     }
   };
 
+  const handleFormatMarkerToggle = async (checked: boolean) => {
+    setConfigInputs((prev) => ({ ...prev, sonarr_format_marker_enabled: checked }));
+
+    try {
+      await apiUpdateConfig("sonarr_format_marker_enabled", checked);
+      setConfigs((prev) => ({ ...prev, sonarr_format_marker_enabled: checked }));
+      toast.success(checked ? "Marcatori formato attivati" : "Marcatori formato disattivati");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Errore salvataggio impostazione");
+      setConfigInputs((prev) => ({ ...prev, sonarr_format_marker_enabled: !checked }));
+    }
+  };
+
+  const handleDubLanguageOverrideToggle = async (checked: boolean) => {
+    setConfigInputs((prev) => ({ ...prev, sonarr_dub_language_override_enabled: checked }));
+
+    try {
+      await apiUpdateConfig("sonarr_dub_language_override_enabled", checked);
+      setConfigs((prev) => ({ ...prev, sonarr_dub_language_override_enabled: checked }));
+      toast.success(
+        checked
+          ? "Override lingua DUB attivato"
+          : "Override lingua DUB disattivato"
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Errore salvataggio impostazione");
+      setConfigInputs((prev) => ({ ...prev, sonarr_dub_language_override_enabled: !checked }));
+    }
+  };
+
   const handleTagModeChange = async (value: string) => {
     setConfigInputs((prev) => ({ ...prev, sonarr_tags_mode: value }));
 
@@ -532,6 +578,10 @@ export default function ImpostazioniPage() {
           sonarr_auto_rename: "Rinomina Automatica",
           sonarr_release_group_enabled: "Release Group",
           sonarr_release_group: "Release Group",
+          sonarr_format_marker_enabled: "Marcatori Formato",
+          sonarr_sub_format_marker: "Marcatore Hardsub",
+          sonarr_dub_format_marker: "Marcatore Dub",
+          sonarr_dub_language_override_enabled: "Lingua DUB Sonarr",
           sonarr_tags_mode: "Modalità Tag",
           sonarr_tags: "Tag",
           animeworld_base_url: "URL Base AnimeWorld",
@@ -768,6 +818,101 @@ export default function ImpostazioniPage() {
                     Con il valore predefinito il file temporaneo diventa <code>Titolo - S01E01-AnimeWorld.ext</code>.
                     Sonarr può poi conservarlo tramite il token <code>{'{Release Group}'}</code>.
                   </p>
+                </div>
+                <div className="sm:hidden border-t my-4" />
+
+                {/* Format Markers */}
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                      <Label htmlFor="format-marker-enabled" className="cursor-pointer">
+                        Marcatori formato
+                      </Label>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
+                        Aggiunge solo la variante del file, senza duplicare il release group.
+                      </p>
+                    </div>
+                    <Switch
+                      id="format-marker-enabled"
+                      checked={configInputs.sonarr_format_marker_enabled}
+                      onCheckedChange={handleFormatMarkerToggle}
+                    />
+                  </div>
+
+                  {([
+                    {
+                      key: "sonarr_sub_format_marker",
+                      label: "Versione sottotitolata",
+                      placeholder: "HARDSUB",
+                    },
+                    {
+                      key: "sonarr_dub_format_marker",
+                      label: "Versione doppiata",
+                      placeholder: "DUB",
+                    },
+                  ] as const).map(({ key, label, placeholder }) => (
+                    <div key={key} className="space-y-1">
+                      <Label htmlFor={key}>{label}</Label>
+                      <div className="flex w-full items-center gap-2">
+                        <Input
+                          id={key}
+                          type="text"
+                          value={configInputs[key]}
+                          onChange={(e) => handleConfigChange(key, e.target.value)}
+                          placeholder={placeholder}
+                          disabled={!configInputs.sonarr_format_marker_enabled}
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => handleSaveConfig(key)}
+                          disabled={
+                            !configInputs.sonarr_format_marker_enabled ||
+                            (isSavingConfig && savingConfigKey === key) ||
+                            !configInputs[key].trim() ||
+                            configInputs[key] ===
+                              (configs[key] || (key === "sonarr_sub_format_marker" ? "HARDSUB" : "DUB"))
+                          }
+                        >
+                          {isSavingConfig && savingConfigKey === key ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Salvataggio...
+                            </>
+                          ) : (
+                            <>
+                              <Save className="mr-2 h-4 w-4" />
+                              Salva
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    Esempi: <code>Titolo - S01E01 [HARDSUB]-AnimeWorld.ext</code> e{" "}
+                    <code>Titolo - S01E02 [DUB]-AnimeWorld.ext</code>. Non viene inserito <code>ITA</code>
+                    nel nome, così Sonarr non interpreta erroneamente un hardsub come audio italiano.
+                  </p>
+                </div>
+                <div className="sm:hidden border-t my-4" />
+
+                {/* Dub language override */}
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0 sm:space-x-4">
+                  <div className="space-y-1 flex-1">
+                    <Label htmlFor="dub-language-override" className="cursor-pointer">
+                      Forza lingua italiana sui DUB in Sonarr
+                    </Label>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      Dopo il rescan, imposta il campo Languages dell&apos;EpisodeFile su Italian solo per i download DUB.
+                      Non modifica il container video e non viene applicato agli hardsub.
+                    </p>
+                  </div>
+                  <Switch
+                    id="dub-language-override"
+                    checked={configInputs.sonarr_dub_language_override_enabled}
+                    onCheckedChange={handleDubLanguageOverrideToggle}
+                  />
                 </div>
                 <div className="sm:hidden border-t my-4" />
 
