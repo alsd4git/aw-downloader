@@ -147,9 +147,9 @@ export class FetchWantedTask extends BaseTask {
         }
 
         // Get download URL from AnimeWorld
-        const downloadUrl = await this.findDownloadUrl(series, season, wantedEp)
+        const download = await this.findDownloadUrl(series, season, wantedEp)
 
-        if (!downloadUrl) {
+        if (!download) {
           logger.warning(
             'FetchWanted',
             `Link di download non trovato per: ${wantedEp.series.title} S${wantedEp.seasonNumber}E${wantedEp.episodeNumber}`
@@ -166,7 +166,8 @@ export class FetchWantedTask extends BaseTask {
           seasonNumber: wantedEp.seasonNumber,
           episodeNumber: wantedEp.episodeNumber,
           episodeTitle: wantedEp.title,
-          downloadUrl: downloadUrl,
+          downloadUrl: download.url,
+          sourceFormat: download.variant,
         })
 
         addedCount++
@@ -192,7 +193,7 @@ export class FetchWantedTask extends BaseTask {
     serie: Series,
     season: Season,
     episode: SonarrWantedRecord
-  ): Promise<string | null> {
+  ): Promise<{ url: string; variant: 'sub' | 'dub' | null } | null> {
     try {
 
       if (!season.downloadUrls || season.downloadUrls.length === 0) {
@@ -218,7 +219,17 @@ export class FetchWantedTask extends BaseTask {
         episodeNumberToSearch
       )
 
-      return downloadLink
+      if (!downloadLink) {
+        return null
+      }
+
+      const variant =
+        season.downloadVariant ??
+        (serie.preferredLanguage === 'sub' || serie.preferredLanguage === 'dub'
+          ? serie.preferredLanguage
+          : null)
+
+      return { url: downloadLink, variant }
     } catch (error) {
       logger.error('FetchWanted', `Errore durante la ricerca del link di download`, error)
       return null
