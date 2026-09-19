@@ -4,6 +4,8 @@ export interface SonarrFilenameOptions {
   episodeNumber: number
   extension: string
   releaseGroup?: string | null
+  sourceMarker?: string | null
+  formatMarker?: string | null
 }
 
 /**
@@ -52,6 +54,25 @@ export function sanitizeReleaseGroup(releaseGroup?: string | null): string | nul
 }
 
 /**
+ * Normalize a human-readable marker while keeping it safe as a filename component.
+ * Brackets are stripped because the builder adds them consistently.
+ */
+export function sanitizeFilenameMarker(marker?: string | null): string | null {
+  if (!marker) {
+    return null
+  }
+
+  const sanitized = marker
+    .trim()
+    .replace(/^\[+|\]+$/g, '')
+    .replace(/[\/:*?"<>|]/g, '-')
+    .replace(/-+/g, '-')
+    .trim()
+
+  return sanitized || null
+}
+
+/**
  * Build the temporary filename AW places in the Sonarr series folder.
  *
  * Sonarr's release-group parser reliably recognises a trailing "-Group" token,
@@ -63,13 +84,19 @@ export function buildSonarrFilename({
   episodeNumber,
   extension,
   releaseGroup,
+  sourceMarker,
+  formatMarker,
 }: SonarrFilenameOptions): string {
   const sanitizedTitle = sanitizeSonarrFilenamePart(seriesTitle)
   const seasonStr = seasonNumber.toString().padStart(2, '0')
   const episodeStr = episodeNumber.toString().padStart(2, '0')
   const normalizedExtension = extension && !extension.startsWith('.') ? `.${extension}` : extension
   const sanitizedReleaseGroup = sanitizeReleaseGroup(releaseGroup)
+  const sanitizedSourceMarker = sanitizeFilenameMarker(sourceMarker)
+  const sanitizedFormatMarker = sanitizeFilenameMarker(formatMarker)
+  const sourcePrefix = sanitizedSourceMarker ? `[${sanitizedSourceMarker}] ` : ''
+  const formatSuffix = sanitizedFormatMarker ? ` [${sanitizedFormatMarker}]` : ''
   const releaseGroupSuffix = sanitizedReleaseGroup ? `-${sanitizedReleaseGroup}` : ''
 
-  return `${sanitizedTitle} - S${seasonStr}E${episodeStr}${releaseGroupSuffix}${normalizedExtension}`
+  return `${sourcePrefix}${sanitizedTitle} - S${seasonStr}E${episodeStr}${formatSuffix}${releaseGroupSuffix}${normalizedExtension}`
 }
