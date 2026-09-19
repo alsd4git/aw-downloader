@@ -24,6 +24,7 @@ export interface DownloadEpisodeParams {
   episodeNumber: number
   episodeTitle: string
   downloadUrl: string
+  sourceFormat?: 'sub' | 'dub' | null
 }
 
 interface DownloadChunk {
@@ -129,7 +130,7 @@ export class DownloadEpisodesTask {
       // Clean up merged temp file
       await fs.rm(outputPath, { force: true }).catch(() => {})
 
-      await this.renameEpisodeFile(params)  
+      await this.finalizeSonarrEpisode(params)
       
       // Mark as completed
       queue.completeItem(queueItemId)
@@ -361,12 +362,21 @@ export class DownloadEpisodesTask {
       const releaseGroup = releaseGroupEnabled
         ? (await Config.get<string>('sonarr_release_group')) || 'AnimeWorld'
         : null
+      const formatMarkerEnabled = (await Config.get<boolean>('sonarr_format_marker_enabled')) ?? false
+      const formatMarker =
+        formatMarkerEnabled && params.sourceFormat === 'sub'
+          ? (await Config.get<string>('sonarr_sub_format_marker')) || 'HARDSUB'
+          : formatMarkerEnabled && params.sourceFormat === 'dub'
+            ? (await Config.get<string>('sonarr_dub_format_marker')) || 'DUB'
+            : null
+
       const sonarrFilename = buildSonarrFilename({
         seriesTitle: params.seriesTitle,
         seasonNumber: params.seasonNumber,
         episodeNumber: params.episodeNumber,
         extension: path.extname(downloadedFilePath),
         releaseGroup,
+        formatMarker,
       })
       const destinationPath = path.join(localSeriesPath, sonarrFilename)
 
@@ -388,32 +398,65 @@ export class DownloadEpisodesTask {
   }
 
   /**
-   * Copy downloaded file to Sonarr folder and trigger rescan
+   * Apply metadata that cannot be represented safely in the filename and optionally
+   * trigger Sonarr's rename command. The episode file is polled because the rescan
+   * command is asynchronous.
    */
-  private static async renameEpisodeFile({seriesTitle, episodeId, episodeNumber, seasonNumber}: DownloadEpisodeParams): Promise<void> {
+  private static async finalizeSonarrEpisode({
+    seriesTitle,
+    episodeId,
+    episodeNumber,
+    seasonNumber,
+    sourceFormat,
+  }: DownloadEpisodeParams): Promise<void> {
     try {
-      // Check if auto-rename is enabled
-      const autoRename = await Config.get<boolean>('sonarr_auto_rename')
-      if (autoRename) {
+      const autoRename = (await Config.get<boolean>('sonarr_auto_rename')) ?? false
+      const overrideDubLanguage =
+        (await Config.get<boolean>('sonarr_dub_language_override_enabled')) ?? false
+      const shouldOverrideDubLanguage = overrideDubLanguage && sourceFormat === 'dub'
 
-        const sonarrService = getSonarrService()
-        await sonarrService.initialize()
-
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        const episode = await sonarrService.getEpisode(episodeId)
-        
-        if (episode.episodeFileId) {
-          await sonarrService.renameEpisodeFile(episode)
-          logger.success('DownloadTask', `File rinominato: ${seriesTitle} S${seasonNumber}E${episodeNumber}`)
-        } else {
-          logger.warning('DownloadTask', `ID del file non trovato per ${seriesTitle} S${seasonNumber}E${episodeNumber}, impossibile rinominare`)
-        }
+      if (!autoRename && !shouldOverrideDubLanguage) {
+        return
       }
 
+      const sonarrService = getSonarrService()
+      await sonarrService.initialize()
+
+      let episode = await sonarrService.getEpisode(episodeId)
+      for (let attempt = 0; !episode.episodeFileId && attempt < 5; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, attempt === 0 ? 2000 : 1000))
+        episode = await sonarrService.getEpisode(episodeId)
+      }
+
+      if (!episode.episodeFileId) {
+        logger.warning(
+          'DownloadTask',
+          `ID del file non trovato per ${seriesTitle} S${seasonNumber}E${episodeNumber}, metadata/rename saltati`
+        )
+        return
+      }
+
+      if (shouldOverrideDubLanguage) {
+        await sonarrService.updateEpisodeFileLanguages(episode.episodeFileId, [
+          { id: 5, name: 'Italian' },
+        ])
+        logger.success(
+          'DownloadTask',
+          `Lingua Sonarr impostata su Italian: ${seriesTitle} S${seasonNumber}E${episodeNumber}`
+        )
+      }
+
+      if (autoRename) {
+        await sonarrService.renameEpisodeFile(episode)
+        logger.success(
+          'DownloadTask',
+          `File rinominato: ${seriesTitle} S${seasonNumber}E${episodeNumber}`
+        )
+      }
     } catch (error) {
-      logger.error('DownloadTask', 'Impossibile rinominare il file dell\'episodio', error)
-      // Don't throw - the download was successful, just the copy/rescan failed
+      logger.error('DownloadTask', 'Impossibile finalizzare i metadata Sonarr del file', error)
+      // The download itself succeeded: do not fail it because metadata/rename failed.
     }
   }
+
 }
