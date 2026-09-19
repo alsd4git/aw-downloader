@@ -78,6 +78,11 @@ export interface SonarrTag {
   label: string
 }
 
+export interface SonarrLanguage {
+  id: number
+  name: string
+}
+
 export interface SonarrAirDateInfo {
   hasValidAirDate: boolean
   startDate: string | null
@@ -508,6 +513,40 @@ export class SonarrService {
       )
       throw new Error(
         `Failed to rescan series: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
+    }
+  }
+
+  /**
+   * Update the logical languages stored on a Sonarr episode file.
+   * This does not rewrite the media container; it only updates Sonarr metadata.
+   */
+  async updateEpisodeFileLanguages(
+    episodeFileId: number,
+    languages: SonarrLanguage[]
+  ): Promise<void> {
+    this.ensureInitialized()
+    this.ensureHealthy()
+
+    try {
+      await axios.put(
+        `${this.sonarrUrl}/api/v3/episodefile/bulk`,
+        [
+          {
+            id: episodeFileId,
+            languages,
+          },
+        ],
+        {
+          headers: {
+            'X-Api-Key': this.sonarrToken!,
+          },
+        }
+      )
+    } catch (error) {
+      logger.error('SonarrService', 'Impossibile aggiornare la lingua del file episodio', error)
+      throw new Error(
+        `Failed to update episode file languages: ${error instanceof Error ? error.message : 'Unknown error'}`
       )
     }
   }
