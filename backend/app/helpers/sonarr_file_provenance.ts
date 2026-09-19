@@ -1,11 +1,13 @@
 export interface SonarrCopyReceipt {
   seriesId: number
   relativePath: string
+  size: number
 }
 
 export interface SonarrIndexedFileIdentity {
   seriesId: number
   relativePath: string
+  size: number
 }
 
 export function normalizeSonarrRelativePath(relativePath: string): string {
@@ -24,6 +26,7 @@ export function isMatchingSonarrCopy(
 ): boolean {
   return (
     receipt.seriesId === indexedFile.seriesId &&
+    receipt.size === indexedFile.size &&
     normalizeSonarrRelativePath(receipt.relativePath) ===
       normalizeSonarrRelativePath(indexedFile.relativePath)
   )
