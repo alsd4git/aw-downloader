@@ -5,13 +5,11 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
   Home,
-  List,
   Settings,
   Download,
   Clock,
   ChevronRight,
   Settings2,
-  Server,
   Tv,
   Film,
 } from "lucide-react";
